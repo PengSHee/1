@@ -366,7 +366,7 @@
     end->type = htons(1);
     end->class = htons(1);
     
-    /
+
     //
     // DNS format, relate to the lab, you need to change them, end
     //
@@ -485,3 +485,4 @@
     
     return 0;
     }
+
