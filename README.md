@@ -9,10 +9,8 @@ CVE-2025-24071 resides in `windows.storage.dll`. The vulnerability exists becaus
 When File Explorer attempts to resolve these paths (to display an icon or initialize a library location), it triggers an outbound SMB connection to the attacker's UNC path, resulting in an immediate NetNTLM hash leak.
 
 # Affected versions
-Windows 10 and earlier versions
-
-Windows 11 (versions without the latest updates installed)
-
+Windows 10 and earlier versions  
+Windows 11 (versions without the latest updates installed)  
 Windows Server 2016/2019/2022 (versions without the latest updates installed)
 
 # Usage
