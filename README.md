@@ -10,7 +10,9 @@ When File Explorer attempts to resolve these paths (to display an icon or initia
 
 # Affected versions
 Windows 10 and earlier versions
+
 Windows 11 (versions without the latest updates installed)
+
 Windows Server 2016/2019/2022 (versions without the latest updates installed)
 
 # Usage
