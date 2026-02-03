@@ -23,24 +23,24 @@ Target:Windows 10
 >>enter IP: attacker IP
 ```
 
-Trigger the vulnerability  
+Trigger the vulnerability：  
 Transfer exploit.zip to the target Windows system  
 Unzip the ZIP file on Windows (key point: the extraction itself can trigger the vulnerability, no need for the user to double-click to open the file)
 
 # Demo
-Windows 10
+Windows 10  
 ![alt text](image.png)
 
-Linux
+Linux  
 ![alt text](image-1.png)
-The captured NTLMv2 hash can be observed in the Responder output:
+The captured NTLMv2 hash can be observed in the Responder output:  
 ![alt text](image-2.png)
 
 # Root Cause Analysis
 The vulnerability is rooted in the function `CLocationDescription::_GetItemFromParsingName`. In unpatched versions of `windows.storage.dll`, the function retrieves a string from a property store and passes it directly to `_GetItemFromPath` without any trust or policy gate.
 
 # References
-[cve.org](https://www.cve.org/CVERecord?id=CVE-2025-24071)
-[MRSC](https://msrc.microsoft.com/update-guide/vulnerability/CVE-2025-24071)
-[blog1](https://blog.csdn.net/weixin_42773448/article/details/146436061)
-[blog2](https://cloud.tencent.com/developer/article/2549756)
+[cve.org](https://www.cve.org/CVERecord?id=CVE-2025-24071)  
+[MRSC](https://msrc.microsoft.com/update-guide/vulnerability/CVE-2025-24071)  
+[blog1](https://blog.csdn.net/weixin_42773448/article/details/146436061)  
+[blog2](https://cloud.tencent.com/developer/article/2549756)  
