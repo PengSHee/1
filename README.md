@@ -32,7 +32,7 @@ Windows 10
 ![alt text](image.png)
 
 Linux  
-![alt text](image-1.png)
+![alt text](image-1.png)  
 The captured NTLMv2 hash can be observed in the Responder output:  
 ![alt text](image-2.png)
 
