@@ -21,8 +21,8 @@ Windows Server 2025 (versions without KB5048685)
 | Target/Victim | Windows 10/11/Server | 192.168.214.135 | Domain-joined |
 | Attacker | Kali Linux/Ubuntu | 192.168.214.129 | Penetration tools |
 
-**Domain Configuration**:
-Domain regular user account: test.comtest1  
+**Domain Configuration**:  
+Domain regular user account: test.com\test1  
 Password: Test..111  
 
 # Prerequisites
