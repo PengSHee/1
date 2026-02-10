@@ -101,7 +101,5 @@ The vulnerability exists in the Windows SMB client's authentication handling mec
 - [知乎保姆级复现教程](https://zhuanlan.zhihu.com/p/1918631282335811185)
 - [腾讯云技术分析](https://cloud.tencent.com/developer/article/2549783)
 - [Revelsi Security Analysis](https://www.revelsi.com/en/blog/cve-2025-33073-privilege-escalation-via-ntlm-reflection-in-windows-smb-client/)
-- [Forestall Deep Dive](https://forestall.io/blog/en/active-directory/cve-2025-33073-a-new-technique-for-reflective-ntlm-relay-attack/)
-- [Undercode Testing Exploitation Guide](https://undercodetesting.com/exploiting-cve-2025-33073-ntlm-reflection-attack-deep-dive/)
-- [Wiz Vulnerability Database](https://www.wiz.io/vulnerability-database/cve/cve-2025-33073)
+
 
