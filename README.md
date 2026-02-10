@@ -46,8 +46,7 @@ sudo ntlmrelayx.py -t 192.168.2.3 -smb2support
 
 **Parameters**:
 - `-t`: Target victim IP
-- `-smb2support`: Enable SMB2 protocol support
-- `-c`: Command to execute with SYSTEM privileges
+- `-smb2support`: Enable SMB2 protocol support  
 
 ## Step 3: Trigger Authentication (Coerce)
 ```bash
