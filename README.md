@@ -25,39 +25,6 @@ Windows Server 2025 (versions without KB5048685)
 Domain regular user account: test.com\test1  
 Password: Test..111  
 
-# Prerequisites
-## Attacker Machine (Kali Linux)
-```bash
-# Update system
-sudo apt update && sudo apt upgrade -y
-
-# Install Python dependencies
-sudo apt install python3 python3-pip git -y
-pip3 install impacket ldap3 dnspython pycryptodomex
-
-# Clone Impacket
-git clone https://github.com/fortra/impacket.git
-cd impacket
-pip3 install .
-
-# Download PetitPotam
-cd ~
-git clone https://github.com/topotam/PetitPotam.git
-
-# Download dnstool.py (if not included in Impacket)
-wget https://raw.githubusercontent.com/dirkjanm/krbrelayx/master/dnstool.py
-```
-
-## Target Configuration
-```powershell
-# Verify SMB signing is disabled (vulnerable state)
-Get-SmbServerConfiguration | Select-Object RequireSecuritySignature
-# Output should be: RequireSecuritySignature : False
-
-# Join target to domain
-Add-Computer -DomainName "luckytom.com" -Credential (Get-Credential) -Restart
-```
-
 # Usage
 
 ## Step 1: Add Malicious DNS Record
