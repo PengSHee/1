@@ -22,8 +22,8 @@ Windows Server 2025 (versions without KB5048685)
 | Attacker | Kali Linux/Ubuntu | 192.168.214.129 | Penetration tools |
 
 **Domain Configuration**:
-- Domain Name: `luckytom.com` (customizable)
-- Domain User: `domainuser01 / User01!@#` (standard user account)
+Domain regular user account: test.comtest1  
+Password: Test..111  
 
 # Prerequisites
 ## Attacker Machine (Kali Linux)
