@@ -87,16 +87,6 @@ The vulnerability exists in the Windows SMB client's authentication handling mec
 2. **Authentication Reflection**: SMB client accepts relayed authentication from itself when SMB signing is not enforced
 3. **Privilege Context**: Relayed machine account authentication grants SYSTEM-level access
 
-**Vulnerable Code Path**:
-```
-SMB Client Authentication Flow:
-1. DNS Resolution (no zone check)
-2. SMB Connection Initiation
-3. NTLM/Kerberos Authentication
-4. Token Validation (BYPASSED in CVE-2025-33073)
-5. Service Access Granted (as SYSTEM)
-```
-
 **The Attack Vector**:
 - Attacker adds DNS record with special suffix that triggers SMB client behavior
 - Coercion tool forces target to authenticate to attacker-controlled name
@@ -104,35 +94,7 @@ SMB Client Authentication Flow:
 - Attacker relays authentication back to victim machine
 - Victim accepts its own relayed credentials and grants SYSTEM access
 
-# Mitigation
 
-## Immediate Actions
-```powershell
-# 1. Install Security Updates
-Install-WindowsUpdate -KBArticleID KB5048685
-
-# 2. Enforce SMB Signing (CRITICAL)
-Set-SmbServerConfiguration -RequireSecuritySignature $true -Force
-Set-SmbClientConfiguration -RequireSecuritySignature $true -Force
-
-# 3. Verify Configuration
-Get-SmbServerConfiguration | Select RequireSecuritySignature
-Get-SmbClientConfiguration | Select RequireSecuritySignature
-
-# 4. Disable NTLM (if possible)
-# Group Policy: Computer Configuration > Windows Settings > Security Settings
-# > Local Policies > Security Options
-# Network security: LAN Manager authentication level
-# Set to: "Send NTLMv2 response only. Refuse LM & NTLM"
-
-# 5. Enable Extended Protection for Authentication
-Set-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Services\LanmanServer\Parameters" `
-  -Name "EnableSecuritySignature" -Value 1
-
-# 6. Disable Print Spooler (if not needed)
-Stop-Service -Name Spooler -Force
-Set-Service -Name Spooler -StartupType Disabled
-```
 
 ## Detection Queries
 
