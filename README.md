@@ -13,7 +13,6 @@ Windows Server 2025 (versions without KB5048685)
 **Note**: Systems with SMB signing disabled are highly vulnerable.
 
 # Environment Setup
-**Minimum Lab Configuration (3 machines)**:
 
 | Role | OS | IP Address | Requirements |
 |------|----|-----------|----|
